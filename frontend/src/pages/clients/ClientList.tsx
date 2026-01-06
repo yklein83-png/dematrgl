@@ -16,15 +16,38 @@ import {
   InputLabel,
   CircularProgress,
   Alert,
+  IconButton,
+  Tooltip,
 } from '@mui/material';
 import {
   Add as AddIcon,
   Search as SearchIcon,
   FileDownload as ExportIcon,
+  Visibility as ViewIcon,
+  Edit as EditIcon,
+  Delete as DeleteIcon,
 } from '@mui/icons-material';
 import DataTable from '../../components/DataTable';
 import PageHeader from '../../components/PageHeader';
+import StatusChip from '../../components/StatusChip';
 import api from '../../services/api';
+
+// Fonction pour formater un numéro de téléphone polynésien
+const formatPhoneNumber = (phone: string | null | undefined): string => {
+  if (!phone) return '';
+  // Nettoyer le numéro (garder uniquement chiffres et +)
+  const cleaned = phone.replace(/[^\d+]/g, '');
+  // Format polynésien: +689 87 12 34 56
+  if (cleaned.startsWith('+689') && cleaned.length === 12) {
+    return `+689 ${cleaned.slice(4, 6)} ${cleaned.slice(6, 8)} ${cleaned.slice(8, 10)} ${cleaned.slice(10, 12)}`;
+  }
+  // Format sans indicatif: 87 12 34 56
+  if (cleaned.length === 8 && !cleaned.startsWith('+')) {
+    return `${cleaned.slice(0, 2)} ${cleaned.slice(2, 4)} ${cleaned.slice(4, 6)} ${cleaned.slice(6, 8)}`;
+  }
+  // Retourner tel quel si format inconnu
+  return phone;
+};
 
 interface Client {
   id: string;
@@ -34,7 +57,8 @@ interface Client {
   t1_email: string;
   t1_telephone: string;
   profil_risque_calcule?: string;
-  statut_dossier: string;
+  statut: string;
+  statut_dossier?: string;  // Legacy field
   created_at: string;
 }
 
@@ -95,9 +119,13 @@ const ClientList: React.FC = () => {
       field: 'nom_complet',
       headerName: 'Nom complet',
       width: 200,
-      valueGetter: (_value: unknown, row: Client) => {
+      renderCell: (params: { row: Client }) => {
+        const row = params.row;
         if (!row) return '';
-        return `${row.t1_prenom || ''} ${row.t1_nom || ''}`.trim();
+        const nomComplet = `${row.t1_prenom || ''} ${row.t1_nom || ''}`.trim();
+        if (nomComplet) return nomComplet;
+        // Afficher le numéro client si pas de nom (brouillon)
+        return row.numero_client ? `(${row.numero_client})` : '(Sans nom)';
       },
     },
     {
@@ -108,7 +136,8 @@ const ClientList: React.FC = () => {
     {
       field: 't1_telephone',
       headerName: 'Téléphone',
-      width: 140,
+      width: 160,
+      renderCell: (params: { row: Client }) => formatPhoneNumber(params.row.t1_telephone),
     },
     {
       field: 'profil_risque_calcule',
@@ -118,23 +147,55 @@ const ClientList: React.FC = () => {
     {
       field: 'statut',
       headerName: 'Statut',
-      width: 120,
-    },
-  ];
-
-  const actions = [
-    {
-      label: 'Voir',
-      onClick: (client: Client) => navigate(`/clients/${client.id}`),
+      width: 130,
+      renderCell: (params: { row: Client }) => (
+        <StatusChip status={params.row.statut || 'prospect'} />
+      ),
     },
     {
-      label: 'Modifier',
-      onClick: (client: Client) => navigate(`/clients/${client.id}/edit`),
-    },
-    {
-      label: 'Supprimer',
-      onClick: (client: Client) => handleDelete(client.id),
-      color: 'error' as const,
+      field: 'actions',
+      headerName: 'Actions',
+      width: 150,
+      sortable: false,
+      filterable: false,
+      renderCell: (params: { row: Client }) => (
+        <Box sx={{ display: 'flex', gap: 0.5 }}>
+          <Tooltip title="Voir">
+            <IconButton
+              size="small"
+              onClick={(e) => {
+                e.stopPropagation();
+                navigate(`/clients/${params.row.id}`);
+              }}
+            >
+              <ViewIcon fontSize="small" />
+            </IconButton>
+          </Tooltip>
+          <Tooltip title="Modifier">
+            <IconButton
+              size="small"
+              onClick={(e) => {
+                e.stopPropagation();
+                navigate(`/clients/${params.row.id}/edit`);
+              }}
+            >
+              <EditIcon fontSize="small" />
+            </IconButton>
+          </Tooltip>
+          <Tooltip title="Supprimer">
+            <IconButton
+              size="small"
+              color="error"
+              onClick={(e) => {
+                e.stopPropagation();
+                handleDelete(params.row.id);
+              }}
+            >
+              <DeleteIcon fontSize="small" />
+            </IconButton>
+          </Tooltip>
+        </Box>
+      ),
     },
   ];
 
@@ -147,8 +208,7 @@ const ClientList: React.FC = () => {
       (client.t1_email || '').toLowerCase().includes(searchLower) ||
       (client.numero_client || '').toLowerCase().includes(searchLower);
 
-    // Le champ statut dans l'API s'appelle 'statut', pas 'statut_dossier'
-    const clientStatut = (client as any).statut || client.statut_dossier || '';
+    const clientStatut = client.statut || '';
     const matchesStatus = statusFilter === '' || clientStatut === statusFilter;
 
     return matchesSearch && matchesStatus;
@@ -208,9 +268,10 @@ const ClientList: React.FC = () => {
             onChange={(e) => setStatusFilter(e.target.value)}
           >
             <MenuItem value="">Tous</MenuItem>
-            <MenuItem value="EN_COURS">En cours</MenuItem>
-            <MenuItem value="VALIDE">Validé</MenuItem>
-            <MenuItem value="ARCHIVE">Archivé</MenuItem>
+            <MenuItem value="brouillon">Brouillon</MenuItem>
+            <MenuItem value="prospect">Prospect</MenuItem>
+            <MenuItem value="client_actif">Client actif</MenuItem>
+            <MenuItem value="client_inactif">Client inactif</MenuItem>
           </Select>
         </FormControl>
 

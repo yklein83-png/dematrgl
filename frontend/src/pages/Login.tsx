@@ -15,12 +15,7 @@ import {
   IconButton,
   CircularProgress,
 } from '@mui/material';
-import {
-  Visibility,
-  VisibilityOff,
-  Email as EmailIcon,
-  Lock as LockIcon,
-} from '@mui/icons-material';
+import { Visibility, VisibilityOff } from '@mui/icons-material';
 import { useForm } from 'react-hook-form';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -100,13 +95,6 @@ const Login: React.FC = () => {
           })}
           error={!!errors.email}
           helperText={errors.email?.message}
-          InputProps={{
-            startAdornment: (
-              <InputAdornment position="start">
-                <EmailIcon color="action" />
-              </InputAdornment>
-            ),
-          }}
         />
 
         <TextField
@@ -125,11 +113,6 @@ const Login: React.FC = () => {
           error={!!errors.password}
           helperText={errors.password?.message}
           InputProps={{
-            startAdornment: (
-              <InputAdornment position="start">
-                <LockIcon color="action" />
-              </InputAdornment>
-            ),
             endAdornment: (
               <InputAdornment position="end">
                 <IconButton
@@ -172,7 +155,7 @@ const Login: React.FC = () => {
           <strong>Email:</strong> pierre.poher@fare-epargne.com
         </Typography>
         <Typography variant="body2" sx={{ fontFamily: 'monospace' }}>
-          <strong>Password:</strong> FareTest2025!
+          <strong>Password:</strong> Fare2025
         </Typography>
       </Box>
     </Box>

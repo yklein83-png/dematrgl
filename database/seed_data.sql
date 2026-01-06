@@ -14,12 +14,12 @@ TRUNCATE TABLE users CASCADE;
 -- ==========================================
 -- USERS (Conseillers)
 -- ==========================================
--- Password pour tous : FareTest2025!
+-- Password pour tous : Fare2025
 -- Hash généré avec bcrypt cost=12
 INSERT INTO users (id, email, civilite, nom, prenom, fonction, telephone, mot_de_passe_hash, role, actif) VALUES
-('11111111-1111-1111-1111-111111111111', 'pierre.poher@fare-epargne.com', 'M.', 'Poher', 'Pierre', 'Directeur', '+689 87 00 00 01', '$2b$12$0Af4IkNiGNRY3ogTdjs8GeBABSCKd/e435byFcF8gGhHkWTB3WG72', 'admin', true),
-('22222222-2222-2222-2222-222222222222', 'marie.teva@fare-epargne.com', 'Mme', 'Teva', 'Marie', 'Conseillère en gestion de patrimoine', '+689 87 00 00 02', '$2b$12$0Af4IkNiGNRY3ogTdjs8GeBABSCKd/e435byFcF8gGhHkWTB3WG72', 'conseiller', true),
-('33333333-3333-3333-3333-333333333333', 'jean.wong@fare-epargne.com', 'M.', 'Wong', 'Jean', 'Conseiller en gestion de patrimoine', '+689 87 00 00 03', '$2b$12$0Af4IkNiGNRY3ogTdjs8GeBABSCKd/e435byFcF8gGhHkWTB3WG72', 'conseiller', true);
+('11111111-1111-1111-1111-111111111111', 'pierre.poher@fare-epargne.com', 'M.', 'Poher', 'Pierre', 'Directeur', '+689 87 00 00 01', '$2b$12$UDnDM4HTbGVqQ8OoVJ98C.2EL8ExcCKPUg4STdp/uw4eDY3Xj.sP6', 'admin', true),
+('22222222-2222-2222-2222-222222222222', 'marie.teva@fare-epargne.com', 'Mme', 'Teva', 'Marie', 'Conseillère en gestion de patrimoine', '+689 87 00 00 02', '$2b$12$UDnDM4HTbGVqQ8OoVJ98C.2EL8ExcCKPUg4STdp/uw4eDY3Xj.sP6', 'conseiller', true),
+('33333333-3333-3333-3333-333333333333', 'jean.wong@fare-epargne.com', 'M.', 'Wong', 'Jean', 'Conseiller en gestion de patrimoine', '+689 87 00 00 03', '$2b$12$UDnDM4HTbGVqQ8OoVJ98C.2EL8ExcCKPUg4STdp/uw4eDY3Xj.sP6', 'conseiller', true);
 
 -- ==========================================
 -- CLIENTS
@@ -369,7 +369,7 @@ INSERT INTO produits (client_id, type_produit, nom_produit, fournisseur, montant
 -- ==========================================
 -- DOCUMENTS
 -- ==========================================
-INSERT INTO documents (client_id, type_document, nom_fichier, chemin_fichier, taille_octets, genere_par, signe, metadata) VALUES
+INSERT INTO documents (client_id, type_document, nom_fichier, chemin_fichier, taille_octets, genere_par, signe, doc_metadata) VALUES
 ('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'DER', 'DER_TEAMO_Robert_2025_11_02.docx', '/exports/2025/11/DER_TEAMO_Robert_2025_11_02.docx', 125000, '22222222-2222-2222-2222-222222222222', true, '{"version": "1.0", "template": "DER_v2025"}'::jsonb),
 ('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'KYC', 'KYC_TEAMO_Robert_2025_11_02.docx', '/exports/2025/11/KYC_TEAMO_Robert_2025_11_02.docx', 98000, '22222222-2222-2222-2222-222222222222', true, '{"version": "1.0", "template": "KYC_v2025"}'::jsonb),
 ('bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb', 'DER', 'DER_MARTIN_Sophie_2025_11_15.docx', '/exports/2025/11/DER_MARTIN_Sophie_2025_11_15.docx', 125000, '22222222-2222-2222-2222-222222222222', false, '{"version": "1.0", "template": "DER_v2025"}'::jsonb);

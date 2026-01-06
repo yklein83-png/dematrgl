@@ -49,7 +49,7 @@ async def login(
     
     if not user:
         # Log échec de connexion
-        AuditLog.log_action(
+        await AuditLog.log_action(
             db,
             user_id=None,
             action=AuditAction.LOGIN.value,
@@ -84,7 +84,7 @@ async def login(
     )
     
     # Log connexion réussie
-    AuditLog.log_action(
+    await AuditLog.log_action(
         db,
         user_id=user.id,
         action=AuditAction.LOGIN.value,
@@ -230,7 +230,7 @@ async def logout(
         if user_id:
             try:
                 # Log déconnexion
-                AuditLog.log_action(
+                await AuditLog.log_action(
                     db,
                     user_id=user_id,
                     action=AuditAction.LOGOUT.value,

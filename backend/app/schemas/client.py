@@ -1131,33 +1131,8 @@ class ClientFormDataCreate(BaseModel):
         })
 
         # RTO - Convention Réception Transmission Ordres
-        rto = data.get('rto', {})
-        result.update({
-            'rto_type_client': rto.get('typeClient', 'personne_physique'),
-            'rto_est_profession_liberal': rto.get('estProfessionLiberal', False),
-            'rto_siret_professionnel': rto.get('siretProfessionnel'),
-            'rto_activite_professionnelle': rto.get('activiteProfessionnelle'),
-            'rto_comptes': rto.get('comptes', []),
-            'rto_modes_communication': rto.get('modesCommunication', []),
-            'rto_modes_communication_autre': rto.get('modesCommunicationAutre'),
-        })
-
-        # Personne morale RTO
-        pm = rto.get('personneMorale', {})
-        if pm:
-            result.update({
-                'rto_pm_raison_sociale': pm.get('raisonSociale'),
-                'rto_pm_objet_social': pm.get('objetSocial'),
-                'rto_pm_forme_juridique': pm.get('formeJuridique'),
-                'rto_pm_numero_rcs': pm.get('numeroRCS'),
-                'rto_pm_ville_rcs': pm.get('villeRCS'),
-                'rto_pm_siege_social': pm.get('siegeSocial'),
-                'rto_pm_code_postal_siege': pm.get('codePostalSiege'),
-                'rto_pm_ville_siege': pm.get('villeSiege'),
-                'rto_pm_representant_civilite': pm.get('representantCivilite'),
-                'rto_pm_representant_nom': pm.get('representantNom'),
-                'rto_pm_representant_prenom': pm.get('representantPrenom'),
-                'rto_pm_representant_qualite': pm.get('representantQualite'),
-            })
+        # NOTE: Les champs RTO détaillés sont stockés dans form_data (JSONB)
+        # Seuls les champs de suivi (rto_applicable, rto_genere, etc.) existent dans le modèle
+        # Les données complètes RTO sont accessibles via form_data.rto
 
         return result

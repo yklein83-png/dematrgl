@@ -54,24 +54,25 @@ CREATE TABLE clients (
     
     -- ==========================================
     -- SECTION 1 : IDENTITÉ TITULAIRE 1
+    -- Note: Champs nullable pour permettre les brouillons
     -- ==========================================
-    t1_civilite VARCHAR(10) NOT NULL,
-    t1_nom VARCHAR(100) NOT NULL,
+    t1_civilite VARCHAR(10),
+    t1_nom VARCHAR(100),
     t1_nom_jeune_fille VARCHAR(100),
-    t1_prenom VARCHAR(100) NOT NULL,
-    t1_date_naissance DATE NOT NULL,
-    t1_lieu_naissance VARCHAR(100) NOT NULL,
+    t1_prenom VARCHAR(100),
+    t1_date_naissance DATE,
+    t1_lieu_naissance VARCHAR(100),
     t1_nationalite VARCHAR(100) DEFAULT 'Française',
-    t1_adresse TEXT NOT NULL,
-    t1_email VARCHAR(255) NOT NULL,
-    t1_telephone VARCHAR(50) NOT NULL,
+    t1_adresse TEXT,
+    t1_email VARCHAR(255),
+    t1_telephone VARCHAR(50),
     t1_us_person BOOLEAN DEFAULT FALSE,
     t1_regime_protection_juridique BOOLEAN DEFAULT FALSE,
     t1_regime_protection_forme VARCHAR(100),
     t1_representant_legal VARCHAR(255),
     t1_residence_fiscale VARCHAR(100) DEFAULT 'France',
     t1_residence_fiscale_autre VARCHAR(255),
-    t1_profession VARCHAR(100) NOT NULL,
+    t1_profession VARCHAR(100),
     t1_retraite_depuis DATE,
     t1_chomage_depuis DATE,
     t1_ancienne_profession VARCHAR(100),
@@ -111,7 +112,7 @@ CREATE TABLE clients (
     -- ==========================================
     -- SECTION 3 : SITUATION FAMILIALE
     -- ==========================================
-    situation_familiale VARCHAR(50) NOT NULL,
+    situation_familiale VARCHAR(50),  -- nullable pour brouillons
     date_mariage DATE,
     contrat_mariage BOOLEAN DEFAULT FALSE,
     regime_matrimonial VARCHAR(100),
@@ -132,8 +133,8 @@ CREATE TABLE clients (
     -- ==========================================
     -- SECTION 4 : SITUATION FINANCIÈRE
     -- ==========================================
-    revenus_annuels_foyer VARCHAR(50) NOT NULL,
-    patrimoine_global VARCHAR(50) NOT NULL,
+    revenus_annuels_foyer VARCHAR(50),  -- nullable pour brouillons
+    patrimoine_global VARCHAR(50),  -- nullable pour brouillons
     charges_annuelles_pourcent DECIMAL(5,2),
     charges_annuelles_montant DECIMAL(15,2),
     capacite_epargne_mensuelle DECIMAL(15,2),
@@ -149,7 +150,7 @@ CREATE TABLE clients (
     -- ==========================================
     -- SECTION 5 : ORIGINE DES FONDS
     -- ==========================================
-    origine_fonds_nature VARCHAR(100) NOT NULL,
+    origine_fonds_nature VARCHAR(100),  -- nullable pour brouillons
     origine_fonds_montant_prevu DECIMAL(15,2),
     origine_economique_revenus BOOLEAN DEFAULT FALSE,
     origine_economique_epargne BOOLEAN DEFAULT FALSE,
@@ -250,10 +251,10 @@ CREATE TABLE clients (
     -- ==========================================
     -- SECTION 8 : PROFIL DE RISQUE
     -- ==========================================
-    objectifs_investissement VARCHAR(255) NOT NULL,
-    horizon_placement VARCHAR(50) NOT NULL,
-    tolerance_risque VARCHAR(50) NOT NULL,
-    pertes_maximales_acceptables VARCHAR(50) NOT NULL,
+    objectifs_investissement VARCHAR(255),  -- nullable pour brouillons
+    horizon_placement VARCHAR(50),  -- nullable pour brouillons
+    tolerance_risque VARCHAR(50),  -- nullable pour brouillons
+    pertes_maximales_acceptables VARCHAR(50),  -- nullable pour brouillons
     experience_perte BOOLEAN DEFAULT FALSE,
     experience_perte_niveau VARCHAR(50),
     reaction_perte VARCHAR(100),
@@ -341,16 +342,16 @@ CREATE TABLE clients (
     validated_at TIMESTAMP,
     validated_by UUID REFERENCES users(id),
     
-    -- Contraintes
-    CONSTRAINT chk_clients_statut CHECK (statut IN ('prospect', 'client_actif', 'client_inactif')),
-    CONSTRAINT chk_clients_t1_civilite CHECK (t1_civilite IN ('Monsieur', 'Madame')),
+    -- Contraintes (modifiées pour accepter NULL/brouillons)
+    CONSTRAINT chk_clients_statut CHECK (statut IS NULL OR statut IN ('brouillon', 'prospect', 'client_actif', 'client_inactif')),
+    CONSTRAINT chk_clients_t1_civilite CHECK (t1_civilite IS NULL OR t1_civilite IN ('Monsieur', 'Madame')),
     CONSTRAINT chk_clients_t2_civilite CHECK (t2_civilite IS NULL OR t2_civilite IN ('Monsieur', 'Madame')),
-    CONSTRAINT chk_clients_situation_familiale CHECK (situation_familiale IN ('Célibataire', 'Marié(e)', 'Pacsé(e)', 'Divorcé(e)', 'Veuf(ve)', 'Union libre')),
-    CONSTRAINT chk_clients_revenus CHECK (revenus_annuels_foyer IN ('<50000', '50000-100000', '100001-150000', '150001-500000', '>500000')),
-    CONSTRAINT chk_clients_patrimoine CHECK (patrimoine_global IN ('<100000', '100001-300000', '300001-500000', '500001-1000000', '1000001-5000000', '>5000000')),
-    CONSTRAINT chk_clients_horizon CHECK (horizon_placement IN ('<1an', '1-3ans', '3-5ans', '5-8ans', '>8ans')),
+    CONSTRAINT chk_clients_situation_familiale CHECK (situation_familiale IS NULL OR situation_familiale IN ('Célibataire', 'Marié(e)', 'Pacsé(e)', 'Divorcé(e)', 'Veuf(ve)', 'Union libre')),
+    CONSTRAINT chk_clients_revenus CHECK (revenus_annuels_foyer IS NULL OR revenus_annuels_foyer IN ('<50000', '50000-100000', '100001-150000', '150001-500000', '>500000')),
+    CONSTRAINT chk_clients_patrimoine CHECK (patrimoine_global IS NULL OR patrimoine_global IN ('<100000', '100001-300000', '300001-500000', '500001-1000000', '1000001-5000000', '>5000000')),
+    CONSTRAINT chk_clients_horizon CHECK (horizon_placement IS NULL OR horizon_placement = '' OR horizon_placement IN ('<1an', '1-3ans', '3-5ans', '5-8ans', '>8ans')),
     CONSTRAINT chk_clients_profil_risque CHECK (profil_risque_calcule IS NULL OR profil_risque_calcule IN ('Sécuritaire', 'Prudent', 'Equilibré', 'Dynamique')),
-    CONSTRAINT chk_clients_lcb_ft CHECK (lcb_ft_niveau_risque IS NULL OR lcb_ft_niveau_risque IN ('Simplifié', 'Standard', 'Complémentaire', 'Renforcé')),
+    CONSTRAINT chk_clients_lcb_ft CHECK (lcb_ft_niveau_risque IS NULL OR lcb_ft_niveau_risque IN ('Faible', 'Simplifié', 'Standard', 'Complémentaire', 'Renforcé')),
     CONSTRAINT chk_clients_etape_parcours CHECK (etape_parcours IS NULL OR etape_parcours IN ('identite', 'situation', 'kyc', 'profil_risque', 'durabilite', 'lcb_ft', 'der_genere', 'der_signe', 'lettre_mission', 'lettre_mission_signee', 'adequation', 'rto', 'complet'))
 );
 

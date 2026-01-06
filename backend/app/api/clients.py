@@ -343,23 +343,42 @@ async def partial_update_client(
 async def delete_client(
     request: Request,
     client_id: UUID,
-    current_user: User = Depends(get_current_admin_user),
+    current_user: User = Depends(get_current_active_user),
     db: AsyncSession = Depends(get_session)
 ) -> dict:
     """
-    Supprimer un client (admin uniquement)
-    
+    Supprimer un client
+    - Admin: peut supprimer n'importe quel client
+    - Conseiller: peut supprimer ses propres clients (brouillons inclus)
+
     Args:
         client_id: ID du client
-        current_user: Admin authentifié
+        current_user: Utilisateur authentifié
         db: Session database
-        
+
     Returns:
         Confirmation de suppression
-        
+
     Raises:
+        403: Non autorisé
         404: Client non trouvé
     """
+    # Vérifier que le client existe et appartient à l'utilisateur (si pas admin)
+    client = await crud_client.get(db, id=client_id)
+
+    if not client:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Client non trouvé"
+        )
+
+    # Vérifier les droits: admin OU propriétaire du client
+    if current_user.role != "admin" and client.conseiller_id != current_user.id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Vous ne pouvez supprimer que vos propres clients"
+        )
+
     # Soft delete
     deleted = await crud_client.delete(db, id=client_id)
     
@@ -544,7 +563,7 @@ async def create_client_from_form(
         pass  # Ignorer si les données sont insuffisantes
 
     # Log création
-    AuditLog.log_action(
+    await AuditLog.log_action(
         db,
         user_id=current_user.id,
         action=AuditAction.CREATE.value,

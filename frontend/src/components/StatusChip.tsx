@@ -14,6 +14,7 @@ interface StatusChipProps {
 
 const statusConfig: Record<string, { label: string; color: ChipProps['color'] }> = {
   // Statuts client
+  brouillon: { label: 'Brouillon', color: 'default' },
   prospect: { label: 'Prospect', color: 'warning' },
   client_actif: { label: 'Client actif', color: 'success' },
   client_inactif: { label: 'Client inactif', color: 'default' },

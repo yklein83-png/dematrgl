@@ -38,6 +38,8 @@ import {
   NavigateBefore as PrevIcon,
 } from '@mui/icons-material';
 import { DocumentType, DOCUMENTS_DISPONIBLES } from '../types/client';
+import { transformFormDataToFlat } from '../utils/formDataTransformer';
+import { PhoneInput, FrenchDatePicker, CurrencyInput, PercentInput } from './inputs';
 
 // ============================================
 // DÉFINITION DES CHAMPS PAR TYPE DE DOCUMENT
@@ -46,11 +48,12 @@ import { DocumentType, DOCUMENTS_DISPONIBLES } from '../types/client';
 export interface DocumentField {
   key: string;
   label: string;
-  type: 'text' | 'date' | 'number' | 'select' | 'boolean' | 'textarea' | 'email' | 'tel';
+  type: 'text' | 'date' | 'number' | 'select' | 'boolean' | 'textarea' | 'email' | 'tel' | 'currency' | 'percent';
   section: string;
   options?: { value: string; label: string }[];
   required?: boolean;
   placeholder?: string;
+  suffix?: string;  // Pour currency: "/mois", "/an"
 }
 
 // Champs requis pour chaque document - du plus simple au plus complet
@@ -97,7 +100,8 @@ export const DOCUMENT_REQUIRED_FIELDS: Record<DocumentType, DocumentField[]> = {
     { key: 't1_code_postal', label: 'Code postal', type: 'text', section: 'Titulaire 1 - Contact', required: true },
     { key: 't1_ville', label: 'Ville', type: 'text', section: 'Titulaire 1 - Contact', required: true },
     { key: 't1_pays_residence', label: 'Pays de résidence', type: 'text', section: 'Titulaire 1 - Contact', required: true },
-    { key: 't1_telephone', label: 'Téléphone', type: 'tel', section: 'Titulaire 1 - Contact', required: true },
+    { key: 't1_telephone', label: 'Téléphone mobile', type: 'tel', section: 'Titulaire 1 - Contact', required: true },
+    { key: 't1_telephone_fixe', label: 'Téléphone fixe', type: 'tel', section: 'Titulaire 1 - Contact' },
     { key: 't1_email', label: 'Email', type: 'email', section: 'Titulaire 1 - Contact', required: true },
 
     // ==================== TITULAIRE 1 - SITUATION PRO ====================
@@ -114,23 +118,87 @@ export const DOCUMENT_REQUIRED_FIELDS: Record<DocumentType, DocumentField[]> = {
     { key: 't1_profession', label: 'Profession / Métier', type: 'text', section: 'Titulaire 1 - Profession', required: true },
     { key: 't1_secteur_activite', label: 'Secteur d\'activité', type: 'text', section: 'Titulaire 1 - Profession' },
     { key: 't1_employeur', label: 'Employeur / Entreprise', type: 'text', section: 'Titulaire 1 - Profession' },
+    { key: 't1_date_debut_activite', label: 'Date début activité', type: 'date', section: 'Titulaire 1 - Profession' },
+    { key: 't1_retraite_depuis', label: 'Retraité depuis', type: 'date', section: 'Titulaire 1 - Profession' },
+    { key: 't1_chomage_depuis', label: 'Sans emploi depuis', type: 'date', section: 'Titulaire 1 - Profession' },
+    { key: 't1_ancienne_profession', label: 'Ancienne profession', type: 'text', section: 'Titulaire 1 - Profession' },
+
+    // ==================== TITULAIRE 1 - CHEF D'ENTREPRISE ====================
+    { key: 't1_chef_entreprise', label: 'Chef d\'entreprise', type: 'boolean', section: 'Titulaire 1 - Entreprise' },
+    { key: 't1_entreprise_denomination', label: 'Dénomination sociale', type: 'text', section: 'Titulaire 1 - Entreprise' },
+    { key: 't1_entreprise_forme_juridique', label: 'Forme juridique', type: 'select', section: 'Titulaire 1 - Entreprise', options: [
+      { value: 'SARL', label: 'SARL' },
+      { value: 'SAS', label: 'SAS' },
+      { value: 'SA', label: 'SA' },
+      { value: 'EURL', label: 'EURL' },
+      { value: 'EI', label: 'Entreprise Individuelle' },
+      { value: 'SCI', label: 'SCI' },
+      { value: 'Autre', label: 'Autre' },
+    ]},
+    { key: 't1_entreprise_siege_social', label: 'Siège social', type: 'text', section: 'Titulaire 1 - Entreprise' },
+    { key: 't1_entreprise_siret', label: 'N° SIRET', type: 'text', section: 'Titulaire 1 - Entreprise' },
+    { key: 't1_entreprise_capital', label: 'Capital social (€)', type: 'number', section: 'Titulaire 1 - Entreprise' },
+    { key: 't1_entreprise_parts_detenues', label: 'Parts détenues (%)', type: 'number', section: 'Titulaire 1 - Entreprise' },
 
     // ==================== TITULAIRE 1 - FISCAL ====================
     { key: 't1_residence_fiscale', label: 'Pays de résidence fiscale', type: 'text', section: 'Titulaire 1 - Fiscal', required: true },
+    { key: 't1_residence_fiscale_autre', label: 'Autre résidence fiscale', type: 'text', section: 'Titulaire 1 - Fiscal' },
     { key: 't1_nif', label: 'N° d\'identification fiscale (NIF)', type: 'text', section: 'Titulaire 1 - Fiscal' },
-    { key: 't1_us_person', label: 'US Person', type: 'boolean', section: 'Titulaire 1 - Fiscal' },
+    { key: 't1_us_person', label: 'US Person (citoyen ou résident fiscal US)', type: 'boolean', section: 'Titulaire 1 - Fiscal' },
+    { key: 't1_tin', label: 'TIN (Tax Identification Number US)', type: 'text', section: 'Titulaire 1 - Fiscal', placeholder: 'Si US Person' },
 
-    // ==================== TITULAIRE 2 (OPTIONNEL) ====================
-    { key: 't2_civilite', label: 'Civilité T2', type: 'select', section: 'Titulaire 2 (optionnel)', options: [
+    // ==================== TITULAIRE 1 - PROTECTION JURIDIQUE ====================
+    { key: 't1_regime_protection', label: 'Sous régime de protection', type: 'boolean', section: 'Titulaire 1 - Protection juridique' },
+    { key: 't1_regime_protection_type', label: 'Type de protection', type: 'select', section: 'Titulaire 1 - Protection juridique', options: [
+      { value: 'Tutelle', label: 'Tutelle' },
+      { value: 'Curatelle simple', label: 'Curatelle simple' },
+      { value: 'Curatelle renforcée', label: 'Curatelle renforcée' },
+      { value: 'Sauvegarde de justice', label: 'Sauvegarde de justice' },
+      { value: 'Habilitation familiale', label: 'Habilitation familiale' },
+    ]},
+    { key: 't1_representant_legal', label: 'Nom du représentant légal', type: 'text', section: 'Titulaire 1 - Protection juridique' },
+    { key: 't1_representant_legal_adresse', label: 'Adresse du représentant', type: 'text', section: 'Titulaire 1 - Protection juridique' },
+
+    // ==================== TITULAIRE 2 - IDENTITÉ ====================
+    { key: 't2_civilite', label: 'Civilité', type: 'select', section: 'Titulaire 2 - Identité', options: [
       { value: 'Monsieur', label: 'Monsieur' },
       { value: 'Madame', label: 'Madame' },
     ]},
-    { key: 't2_nom', label: 'Nom T2', type: 'text', section: 'Titulaire 2 (optionnel)' },
-    { key: 't2_prenom', label: 'Prénom T2', type: 'text', section: 'Titulaire 2 (optionnel)' },
-    { key: 't2_date_naissance', label: 'Date de naissance T2', type: 'date', section: 'Titulaire 2 (optionnel)' },
-    { key: 't2_lieu_naissance', label: 'Lieu de naissance T2', type: 'text', section: 'Titulaire 2 (optionnel)' },
-    { key: 't2_nationalite', label: 'Nationalité T2', type: 'text', section: 'Titulaire 2 (optionnel)' },
-    { key: 't2_profession', label: 'Profession T2', type: 'text', section: 'Titulaire 2 (optionnel)' },
+    { key: 't2_nom', label: 'Nom', type: 'text', section: 'Titulaire 2 - Identité' },
+    { key: 't2_nom_naissance', label: 'Nom de naissance', type: 'text', section: 'Titulaire 2 - Identité' },
+    { key: 't2_prenom', label: 'Prénom', type: 'text', section: 'Titulaire 2 - Identité' },
+    { key: 't2_date_naissance', label: 'Date de naissance', type: 'date', section: 'Titulaire 2 - Identité' },
+    { key: 't2_lieu_naissance', label: 'Lieu de naissance', type: 'text', section: 'Titulaire 2 - Identité' },
+    { key: 't2_pays_naissance', label: 'Pays de naissance', type: 'text', section: 'Titulaire 2 - Identité' },
+    { key: 't2_nationalite', label: 'Nationalité', type: 'text', section: 'Titulaire 2 - Identité' },
+
+    // ==================== TITULAIRE 2 - CONTACT ====================
+    { key: 't2_adresse', label: 'Adresse', type: 'text', section: 'Titulaire 2 - Contact' },
+    { key: 't2_code_postal', label: 'Code postal', type: 'text', section: 'Titulaire 2 - Contact' },
+    { key: 't2_ville', label: 'Ville', type: 'text', section: 'Titulaire 2 - Contact' },
+    { key: 't2_pays_residence', label: 'Pays de résidence', type: 'text', section: 'Titulaire 2 - Contact' },
+    { key: 't2_telephone', label: 'Téléphone', type: 'tel', section: 'Titulaire 2 - Contact' },
+    { key: 't2_email', label: 'Email', type: 'email', section: 'Titulaire 2 - Contact' },
+
+    // ==================== TITULAIRE 2 - PROFESSION ====================
+    { key: 't2_situation_pro', label: 'Situation professionnelle', type: 'select', section: 'Titulaire 2 - Profession', options: [
+      { value: 'Salarié', label: 'Salarié' },
+      { value: 'Cadre', label: 'Cadre' },
+      { value: 'Chef d\'entreprise', label: 'Chef d\'entreprise' },
+      { value: 'Profession libérale', label: 'Profession libérale' },
+      { value: 'Fonctionnaire', label: 'Fonctionnaire' },
+      { value: 'Retraité', label: 'Retraité' },
+      { value: 'Sans activité', label: 'Sans activité' },
+    ]},
+    { key: 't2_profession', label: 'Profession / Métier', type: 'text', section: 'Titulaire 2 - Profession' },
+    { key: 't2_secteur_activite', label: 'Secteur d\'activité', type: 'text', section: 'Titulaire 2 - Profession' },
+    { key: 't2_employeur', label: 'Employeur', type: 'text', section: 'Titulaire 2 - Profession' },
+    { key: 't2_chef_entreprise', label: 'Chef d\'entreprise', type: 'boolean', section: 'Titulaire 2 - Profession' },
+
+    // ==================== TITULAIRE 2 - FISCAL ====================
+    { key: 't2_residence_fiscale', label: 'Résidence fiscale', type: 'text', section: 'Titulaire 2 - Fiscal' },
+    { key: 't2_nif', label: 'N° identification fiscale', type: 'text', section: 'Titulaire 2 - Fiscal' },
+    { key: 't2_us_person', label: 'US Person', type: 'boolean', section: 'Titulaire 2 - Fiscal' },
 
     // ==================== SITUATION FAMILIALE ====================
     { key: 'situation_familiale', label: 'Situation familiale', type: 'select', section: 'Situation familiale', required: true, options: [
@@ -142,6 +210,8 @@ export const DOCUMENT_REQUIRED_FIELDS: Record<DocumentType, DocumentField[]> = {
       { value: 'Séparé(e)', label: 'Séparé(e)' },
       { value: 'Veuf(ve)', label: 'Veuf(ve)' },
     ]},
+    { key: 'date_mariage', label: 'Date de mariage', type: 'date', section: 'Situation familiale' },
+    { key: 'contrat_mariage', label: 'Contrat de mariage', type: 'boolean', section: 'Situation familiale' },
     { key: 'regime_matrimonial', label: 'Régime matrimonial', type: 'select', section: 'Situation familiale', options: [
       { value: '', label: '-- Non concerné --' },
       { value: 'Communauté légale', label: 'Communauté réduite aux acquêts' },
@@ -149,9 +219,26 @@ export const DOCUMENT_REQUIRED_FIELDS: Record<DocumentType, DocumentField[]> = {
       { value: 'Séparation de biens', label: 'Séparation de biens' },
       { value: 'Participation aux acquêts', label: 'Participation aux acquêts' },
     ]},
+    { key: 'date_pacs', label: 'Date du PACS', type: 'date', section: 'Situation familiale' },
+    { key: 'convention_pacs', label: 'Convention PACS', type: 'boolean', section: 'Situation familiale' },
+    { key: 'regime_pacs', label: 'Régime PACS', type: 'select', section: 'Situation familiale', options: [
+      { value: '', label: '-- Non concerné --' },
+      { value: 'Séparation de biens', label: 'Séparation de biens' },
+      { value: 'Indivision', label: 'Indivision' },
+    ]},
+    { key: 'date_divorce', label: 'Date du divorce', type: 'date', section: 'Situation familiale' },
     { key: 'nombre_enfants', label: 'Nombre d\'enfants', type: 'number', section: 'Situation familiale' },
-    { key: 'enfants_a_charge', label: 'Enfants à charge', type: 'number', section: 'Situation familiale' },
+    { key: 'enfants_a_charge', label: 'Enfants à charge fiscalement', type: 'number', section: 'Situation familiale' },
     { key: 'personnes_a_charge', label: 'Autres personnes à charge', type: 'number', section: 'Situation familiale' },
+    { key: 'informations_complementaires', label: 'Informations complémentaires famille', type: 'textarea', section: 'Situation familiale' },
+
+    // ==================== DONATIONS ====================
+    { key: 'donation_entre_epoux', label: 'Donation entre époux', type: 'boolean', section: 'Donations' },
+    { key: 'donation_entre_epoux_date', label: 'Date donation époux', type: 'date', section: 'Donations' },
+    { key: 'donation_entre_epoux_montant', label: 'Montant donation époux', type: 'currency', section: 'Donations' },
+    { key: 'donation_enfants', label: 'Donation aux enfants', type: 'boolean', section: 'Donations' },
+    { key: 'donation_enfants_date', label: 'Date donation enfants', type: 'date', section: 'Donations' },
+    { key: 'donation_enfants_montant', label: 'Montant donation enfants', type: 'currency', section: 'Donations' },
 
     // ==================== SITUATION FINANCIÈRE ====================
     // Options alignées sur le QCC officiel
@@ -162,9 +249,9 @@ export const DOCUMENT_REQUIRED_FIELDS: Record<DocumentType, DocumentField[]> = {
       { value: '150 000 € - 500 000 €', label: '150 000 € à 500 000 €' },
       { value: '> 500 000 €', label: 'Plus de 500 000 €' },
     ]},
-    { key: 'charges_annuelles_pourcent', label: 'Charges (% des revenus)', type: 'number', section: 'Situation financière' },
-    { key: 'charges_annuelles_montant', label: 'Charges annuelles (€)', type: 'number', section: 'Situation financière' },
-    { key: 'capacite_epargne_mensuelle', label: 'Capacité d\'épargne mensuelle (€)', type: 'number', section: 'Situation financière' },
+    { key: 'charges_annuelles_pourcent', label: 'Charges (% des revenus)', type: 'percent', section: 'Situation financière' },
+    { key: 'charges_annuelles_montant', label: 'Charges annuelles', type: 'currency', section: 'Situation financière' },
+    { key: 'capacite_epargne_mensuelle', label: 'Capacité d\'épargne mensuelle', type: 'currency', section: 'Situation financière', suffix: '/mois' },
     { key: 'impot_revenu', label: 'Assujetti IR', type: 'boolean', section: 'Situation financière' },
     { key: 'impot_fortune_immobiliere', label: 'Assujetti IFI', type: 'boolean', section: 'Situation financière' },
 
@@ -185,12 +272,24 @@ export const DOCUMENT_REQUIRED_FIELDS: Record<DocumentType, DocumentField[]> = {
     { key: 'credit_immobilier', label: 'Crédit immobilier en cours', type: 'boolean', section: 'Patrimoine' },
 
     // ==================== ORIGINE DES FONDS ====================
-    { key: 'origine_economique_epargne', label: 'Origine: Épargne', type: 'boolean', section: 'Origine des fonds', required: true },
+    { key: 'origine_nature', label: 'Nature des fonds', type: 'select', section: 'Origine des fonds', options: [
+      { value: 'Épargne personnelle', label: 'Épargne personnelle' },
+      { value: 'Héritage', label: 'Héritage' },
+      { value: 'Cession', label: 'Cession (entreprise/immobilier)' },
+      { value: 'Revenus professionnels', label: 'Revenus professionnels' },
+      { value: 'Autre', label: 'Autre' },
+    ]},
+    { key: 'montant_investi_prevu', label: 'Montant prévu à investir', type: 'currency', section: 'Origine des fonds' },
+    { key: 'origine_economique_revenus', label: 'Origine: Revenus professionnels', type: 'boolean', section: 'Origine des fonds' },
+    { key: 'origine_economique_epargne', label: 'Origine: Épargne', type: 'boolean', section: 'Origine des fonds' },
     { key: 'origine_economique_heritage', label: 'Origine: Héritage/Donation', type: 'boolean', section: 'Origine des fonds' },
     { key: 'origine_economique_vente_immo', label: 'Origine: Vente immobilière', type: 'boolean', section: 'Origine des fonds' },
     { key: 'origine_economique_cession', label: 'Origine: Cession d\'entreprise', type: 'boolean', section: 'Origine des fonds' },
-    { key: 'origine_economique_autre', label: 'Origine: Autre', type: 'text', section: 'Origine des fonds' },
-    { key: 'montant_investi_prevu', label: 'Montant prévu à investir', type: 'number', section: 'Origine des fonds' },
+    { key: 'origine_economique_cession_mobiliere', label: 'Origine: Cession valeurs mobilières', type: 'boolean', section: 'Origine des fonds' },
+    { key: 'origine_economique_gains_jeu', label: 'Origine: Gains jeux/paris', type: 'boolean', section: 'Origine des fonds' },
+    { key: 'origine_economique_assurance_vie', label: 'Origine: Rachat assurance-vie', type: 'boolean', section: 'Origine des fonds' },
+    { key: 'origine_economique_autre', label: 'Origine: Autre (préciser)', type: 'text', section: 'Origine des fonds' },
+    { key: 'etablissement_bancaire_origine', label: 'Établissement bancaire d\'origine', type: 'text', section: 'Origine des fonds', placeholder: 'Banque où sont les fonds' },
     { key: 'origine_fonds', label: 'Détails origine des fonds', type: 'textarea', section: 'Origine des fonds', placeholder: 'Précisions sur l\'origine...' },
 
     // ==================== LCB-FT / CONFORMITÉ ====================
@@ -199,6 +298,42 @@ export const DOCUMENT_REQUIRED_FIELDS: Record<DocumentType, DocumentField[]> = {
     { key: 'ppe_fonction', label: 'Si PPE, fonction exercée', type: 'text', section: 'Conformité LCB-FT' },
     { key: 'beneficiaire_effectif', label: 'Bénéficiaire effectif = titulaire', type: 'boolean', section: 'Conformité LCB-FT' },
     { key: 'tiers_beneficiaire', label: 'Investit pour le compte d\'un tiers', type: 'boolean', section: 'Conformité LCB-FT' },
+
+    // ==================== KYC - FORMATION ====================
+    { key: 'niveau_etudes', label: 'Niveau d\'études', type: 'select', section: 'KYC - Formation', options: [
+      { value: 'Bac', label: 'Baccalauréat' },
+      { value: 'Bac+2', label: 'Bac +2' },
+      { value: 'Bac+3', label: 'Bac +3 (Licence)' },
+      { value: 'Bac+5', label: 'Bac +5 (Master)' },
+      { value: 'Bac+8', label: 'Bac +8 (Doctorat)' },
+      { value: 'Autre', label: 'Autre' },
+    ]},
+    { key: 'domaine_etudes', label: 'Domaine d\'études', type: 'text', section: 'KYC - Formation' },
+    { key: 'formation_financiere', label: 'Formation en finance/économie', type: 'boolean', section: 'KYC - Formation' },
+    { key: 'formation_financiere_detail', label: 'Détail formation financière', type: 'text', section: 'KYC - Formation' },
+
+    // ==================== KYC - EXPÉRIENCE INVESTISSEMENT ====================
+    { key: 'experience_professionnelle_finance', label: 'Expérience pro en finance (>1 an)', type: 'boolean', section: 'KYC - Expérience' },
+    { key: 'experience_finance_duree', label: 'Durée expérience finance', type: 'text', section: 'KYC - Expérience' },
+    { key: 'experience_finance_poste', label: 'Poste occupé en finance', type: 'text', section: 'KYC - Expérience' },
+    { key: 'annees_premier_investissement', label: 'Années depuis 1er investissement', type: 'number', section: 'KYC - Expérience' },
+    { key: 'montant_moyen_operation', label: 'Montant moyen par opération', type: 'currency', section: 'KYC - Expérience' },
+    { key: 'gestion_mandat', label: 'Gestion sous mandat (actuelle/passée)', type: 'boolean', section: 'KYC - Expérience' },
+    { key: 'gestion_conseiller', label: 'Suivi par un conseiller', type: 'boolean', section: 'KYC - Expérience' },
+
+    // ==================== KYC - SOURCES D'INFORMATION ====================
+    { key: 'lecture_presse_financiere', label: 'Lecture presse financière', type: 'boolean', section: 'KYC - Sources info' },
+    { key: 'sources_internet', label: 'Sites internet spécialisés', type: 'boolean', section: 'KYC - Sources info' },
+    { key: 'sources_conseiller', label: 'Conseiller financier', type: 'boolean', section: 'KYC - Sources info' },
+    { key: 'sources_banque', label: 'Conseiller bancaire', type: 'boolean', section: 'KYC - Sources info' },
+    { key: 'sources_entourage', label: 'Entourage (famille, amis)', type: 'boolean', section: 'KYC - Sources info' },
+    { key: 'sources_reseaux_sociaux', label: 'Réseaux sociaux', type: 'boolean', section: 'KYC - Sources info' },
+
+    // ==================== KYC - COMPRÉHENSION DES RISQUES ====================
+    { key: 'comprend_risque_perte', label: 'Comprend le risque de perte en capital', type: 'boolean', section: 'KYC - Compréhension risques' },
+    { key: 'comprend_risque_liquidite', label: 'Comprend le risque de liquidité', type: 'boolean', section: 'KYC - Compréhension risques' },
+    { key: 'comprend_risque_change', label: 'Comprend le risque de change', type: 'boolean', section: 'KYC - Compréhension risques' },
+    { key: 'comprend_effet_levier', label: 'Comprend l\'effet de levier', type: 'boolean', section: 'KYC - Compréhension risques' },
   ],
 
   // PROFIL_RISQUE - Évaluation complète du profil investisseur (conforme QCC réglementaire)
@@ -550,16 +685,55 @@ export const DOCUMENT_REQUIRED_FIELDS: Record<DocumentType, DocumentField[]> = {
 
   // LETTRE_MISSION - Contrat de mission
   LETTRE_MISSION: [
+    // ==================== CLIENT ====================
+    { key: 't1_civilite', label: 'Civilité', type: 'select', section: 'Client', options: [
+      { value: 'Monsieur', label: 'Monsieur' },
+      { value: 'Madame', label: 'Madame' },
+    ]},
     { key: 't1_nom', label: 'Nom', type: 'text', section: 'Client', required: true },
     { key: 't1_prenom', label: 'Prénom', type: 'text', section: 'Client', required: true },
     { key: 't1_adresse', label: 'Adresse', type: 'text', section: 'Client', required: true },
-    { key: 'type_mission', label: 'Type de mission', type: 'select', section: 'Mission', required: true, options: [
-      { value: 'Conseil ponctuel', label: 'Conseil ponctuel' },
-      { value: 'Suivi régulier', label: 'Suivi régulier annuel' },
-      { value: 'Gestion conseillée', label: 'Gestion conseillée' },
+    { key: 't1_code_postal', label: 'Code postal', type: 'text', section: 'Client' },
+    { key: 't1_ville', label: 'Ville', type: 'text', section: 'Client' },
+    { key: 't1_email', label: 'Email', type: 'email', section: 'Client' },
+    { key: 't1_telephone', label: 'Téléphone', type: 'tel', section: 'Client' },
+
+    // ==================== TYPE DE PRESTATION ====================
+    { key: 'type_prestation', label: 'Type de prestation', type: 'select', section: 'Type de prestation', required: true, options: [
+      { value: 'conseil_ponctuel', label: 'Conseil ponctuel' },
+      { value: 'suivi_regulier', label: 'Suivi régulier' },
+      { value: 'gestion_conseillee', label: 'Gestion conseillée' },
+      { value: 'audit_patrimonial', label: 'Audit patrimonial' },
     ]},
-    { key: 'perimetre_mission', label: 'Périmètre de la mission', type: 'textarea', section: 'Mission', placeholder: 'Décrire le périmètre...' },
-    { key: 'honoraires', label: 'Honoraires', type: 'text', section: 'Honoraires', placeholder: 'Ex: 500€ HT ou 1% des actifs' },
+    { key: 'mode_conseil', label: 'Mode de conseil', type: 'select', section: 'Type de prestation', options: [
+      { value: 'independant', label: 'Conseil indépendant' },
+      { value: 'non_independant', label: 'Conseil non-indépendant' },
+    ]},
+    { key: 'instruments_souhaites', label: 'Instruments financiers souhaités', type: 'textarea', section: 'Type de prestation', placeholder: 'Assurance-vie, PEA, Compte-titres, SCPI...' },
+
+    // ==================== PÉRIMÈTRE MISSION ====================
+    { key: 'perimetre_mission', label: 'Périmètre de la mission', type: 'textarea', section: 'Périmètre', placeholder: 'Décrire le périmètre...' },
+    { key: 'frequence_suivi', label: 'Fréquence de suivi', type: 'select', section: 'Périmètre', options: [
+      { value: 'ponctuel', label: 'Ponctuel (à la demande)' },
+      { value: 'semestriel', label: 'Semestriel' },
+      { value: 'annuel', label: 'Annuel' },
+      { value: 'trimestriel', label: 'Trimestriel' },
+    ]},
+
+    // ==================== RÉMUNÉRATION ====================
+    { key: 'remuneration_mode', label: 'Mode de rémunération', type: 'select', section: 'Rémunération', required: true, options: [
+      { value: 'honoraires', label: 'Honoraires' },
+      { value: 'commissions', label: 'Commissions' },
+      { value: 'mixte', label: 'Mixte (honoraires + commissions)' },
+    ]},
+    { key: 'honoraires_montant', label: 'Montant honoraires (HT)', type: 'currency', section: 'Rémunération' },
+    { key: 'honoraires_description', label: 'Description des honoraires', type: 'textarea', section: 'Rémunération', placeholder: 'Détail de la facturation...' },
+
+    // ==================== SIGNATURES ====================
+    { key: 'date_remise_der', label: 'Date remise DER', type: 'date', section: 'Signatures' },
+    { key: 'date_signature', label: 'Date de signature', type: 'date', section: 'Signatures' },
+    { key: 'lieu_signature', label: 'Lieu de signature', type: 'text', section: 'Signatures' },
+    { key: 'nombre_exemplaires', label: 'Nombre d\'exemplaires', type: 'number', section: 'Signatures' },
   ],
 
   // DECLARATION_ADEQUATION - Justification du conseil
@@ -580,11 +754,66 @@ export const DOCUMENT_REQUIRED_FIELDS: Record<DocumentType, DocumentField[]> = {
 
   // CONVENTION_RTO - Réception Transmission d'Ordres
   CONVENTION_RTO: [
-    { key: 't1_nom', label: 'Nom', type: 'text', section: 'Client', required: true },
-    { key: 't1_prenom', label: 'Prénom', type: 'text', section: 'Client', required: true },
+    // ==================== TYPE DE CLIENT ====================
+    { key: 'rto_type_client', label: 'Type de client', type: 'select', section: 'Type de client', required: true, options: [
+      { value: 'particulier', label: 'Personne Physique (Particulier)' },
+      { value: 'professionnel', label: 'Personne Physique (Professionnel)' },
+      { value: 'personne_morale', label: 'Personne Morale' },
+    ]},
+    { key: 'rto_profession_liberal', label: 'Profession libérale', type: 'boolean', section: 'Type de client' },
+    { key: 'rto_siret_professionnel', label: 'SIRET professionnel', type: 'text', section: 'Type de client' },
+    { key: 'rto_activite_professionnelle', label: 'Activité professionnelle', type: 'text', section: 'Type de client' },
+
+    // ==================== CLIENT PERSONNE PHYSIQUE ====================
+    { key: 't1_civilite', label: 'Civilité', type: 'select', section: 'Client - Personne Physique', options: [
+      { value: 'Monsieur', label: 'Monsieur' },
+      { value: 'Madame', label: 'Madame' },
+    ]},
+    { key: 't1_nom', label: 'Nom', type: 'text', section: 'Client - Personne Physique', required: true },
+    { key: 't1_prenom', label: 'Prénom', type: 'text', section: 'Client - Personne Physique', required: true },
+    { key: 't1_adresse', label: 'Adresse', type: 'text', section: 'Client - Personne Physique' },
+    { key: 't1_email', label: 'Email', type: 'email', section: 'Client - Personne Physique' },
+    { key: 't1_telephone', label: 'Téléphone', type: 'tel', section: 'Client - Personne Physique' },
+
+    // ==================== PERSONNE MORALE ====================
+    { key: 'rto_pm_raison_sociale', label: 'Raison sociale', type: 'text', section: 'Personne Morale' },
+    { key: 'rto_pm_objet_social', label: 'Objet social', type: 'text', section: 'Personne Morale' },
+    { key: 'rto_pm_forme_juridique', label: 'Forme juridique', type: 'select', section: 'Personne Morale', options: [
+      { value: 'SARL', label: 'SARL' },
+      { value: 'SAS', label: 'SAS' },
+      { value: 'SA', label: 'SA' },
+      { value: 'SCI', label: 'SCI' },
+      { value: 'Association', label: 'Association' },
+      { value: 'Autre', label: 'Autre' },
+    ]},
+    { key: 'rto_pm_numero_rcs', label: 'Numéro RCS', type: 'text', section: 'Personne Morale' },
+    { key: 'rto_pm_ville_rcs', label: 'Ville RCS', type: 'text', section: 'Personne Morale' },
+    { key: 'rto_pm_siege_social', label: 'Siège social', type: 'text', section: 'Personne Morale' },
+    { key: 'rto_pm_code_postal_siege', label: 'Code postal siège', type: 'text', section: 'Personne Morale' },
+    { key: 'rto_pm_ville_siege', label: 'Ville siège', type: 'text', section: 'Personne Morale' },
+
+    // ==================== REPRÉSENTANT PERSONNE MORALE ====================
+    { key: 'rto_pm_representant_civilite', label: 'Civilité représentant', type: 'select', section: 'Représentant PM', options: [
+      { value: 'Monsieur', label: 'Monsieur' },
+      { value: 'Madame', label: 'Madame' },
+    ]},
+    { key: 'rto_pm_representant_nom', label: 'Nom représentant', type: 'text', section: 'Représentant PM' },
+    { key: 'rto_pm_representant_prenom', label: 'Prénom représentant', type: 'text', section: 'Représentant PM' },
+    { key: 'rto_pm_representant_qualite', label: 'Qualité (Gérant, Président...)', type: 'text', section: 'Représentant PM' },
+
+    // ==================== COMPTE ====================
     { key: 'etablissement_teneur', label: 'Établissement teneur de compte', type: 'text', section: 'Compte', required: true },
     { key: 'numero_compte', label: 'Numéro de compte', type: 'text', section: 'Compte' },
-    { key: 'mode_transmission', label: 'Mode de transmission des ordres', type: 'select', section: 'Ordres', options: [
+
+    // ==================== MODES DE COMMUNICATION ====================
+    { key: 'rto_modes_communication', label: 'Modes de communication', type: 'select', section: 'Communication', options: [
+      { value: 'telephone', label: 'Téléphone' },
+      { value: 'email', label: 'Email' },
+      { value: 'courrier', label: 'Courrier' },
+      { value: 'plateforme', label: 'Plateforme électronique' },
+    ]},
+    { key: 'rto_modes_communication_autre', label: 'Autre mode de communication', type: 'text', section: 'Communication' },
+    { key: 'mode_transmission', label: 'Mode de transmission des ordres', type: 'select', section: 'Communication', options: [
       { value: 'Téléphone', label: 'Téléphone' },
       { value: 'Email', label: 'Email' },
       { value: 'Courrier', label: 'Courrier' },
@@ -636,130 +865,8 @@ export default function DocumentEditor({
   // Sections uniques
   const sections = [...new Set(fields.map((f) => f.section))];
 
-  // Fonction pour transformer les données du formulaire de création vers le format DocumentEditor
-  const transformFormDataToFlat = (formData: any): Record<string, any> => {
-    const result: Record<string, any> = {};
-
-    // Transformation des civilités
-    const mapCivilite = (val: string) => {
-      const map: Record<string, string> = { 'M': 'Monsieur', 'Mme': 'Madame', 'Monsieur': 'Monsieur', 'Madame': 'Madame' };
-      return map[val] || val;
-    };
-
-    // Transformation des situations familiales
-    const mapSituationFamiliale = (val: string) => {
-      const map: Record<string, string> = {
-        'marie': 'Marié(e)', 'pacse': 'Pacsé(e)', 'celibataire': 'Célibataire',
-        'veuf': 'Veuf(ve)', 'divorce': 'Divorcé(e)', 'union_libre': 'Concubinage',
-        'Marié(e)': 'Marié(e)', 'Pacsé(e)': 'Pacsé(e)', 'Célibataire': 'Célibataire',
-        'Veuf(ve)': 'Veuf(ve)', 'Divorcé(e)': 'Divorcé(e)', 'Concubinage': 'Concubinage',
-      };
-      return map[val] || val;
-    };
-
-    // Titulaire 1
-    if (formData.titulaire1) {
-      const t1 = formData.titulaire1;
-      result.t1_civilite = mapCivilite(t1.civilite);
-      result.t1_nom = t1.nom;
-      result.t1_nom_naissance = t1.nomJeuneFille;
-      result.t1_prenom = t1.prenom;
-      result.t1_date_naissance = t1.dateNaissance;
-      result.t1_lieu_naissance = t1.lieuNaissance;
-      result.t1_pays_naissance = t1.paysNaissance;
-      result.t1_nationalite = t1.nationalite;
-      result.t1_adresse = t1.adresse;
-      result.t1_code_postal = t1.codePostal;
-      result.t1_ville = t1.ville;
-      result.t1_pays_residence = t1.pays;
-      result.t1_telephone = t1.telephone;
-      result.t1_email = t1.email;
-      result.t1_us_person = t1.usPerson;
-      result.t1_residence_fiscale = t1.residenceFiscale;
-      result.t1_nif = t1.numeroFiscal;
-      result.t1_situation_pro = t1.situationProfessionnelle;
-      result.t1_profession = t1.profession;
-      result.t1_secteur_activite = t1.secteurActivite;
-      result.t1_employeur = t1.employeur;
-    }
-
-    // Titulaire 2
-    if (formData.hasTitulaire2 && formData.titulaire2) {
-      const t2 = formData.titulaire2;
-      result.t2_civilite = mapCivilite(t2.civilite);
-      result.t2_nom = t2.nom;
-      result.t2_prenom = t2.prenom;
-      result.t2_date_naissance = t2.dateNaissance;
-      result.t2_lieu_naissance = t2.lieuNaissance;
-      result.t2_nationalite = t2.nationalite;
-      result.t2_profession = t2.profession;
-    }
-
-    // Situation familiale
-    if (formData.situationFamiliale) {
-      const sf = formData.situationFamiliale;
-      result.situation_familiale = mapSituationFamiliale(sf.situation);
-      result.regime_matrimonial = sf.regimeMatrimonial;
-      result.nombre_enfants = sf.nombreEnfants;
-      result.enfants_a_charge = sf.nombreEnfantsACharge;
-    }
-
-    // Situation financière
-    if (formData.situationFinanciere) {
-      const fin = formData.situationFinanciere;
-      result.revenus_annuels_foyer = fin.revenusAnnuelsFoyer;
-      result.patrimoine_global = fin.patrimoineGlobal;
-      result.charges_annuelles_pourcent = fin.chargesAnnuellesPourcent;
-      result.charges_annuelles_montant = fin.chargesAnnuellesMontant;
-      result.capacite_epargne_mensuelle = fin.capaciteEpargneMensuelle;
-      result.impot_revenu = fin.impotRevenu;
-      result.impot_fortune_immobiliere = fin.impotFortuneImmobiliere;
-    }
-
-    // Origine des fonds
-    if (formData.origineFonds) {
-      const of = formData.origineFonds;
-      result.origine_economique_epargne = of.origineEpargne;
-      result.origine_economique_heritage = of.origineHeritage;
-      result.origine_economique_vente_immo = of.origineCessionImmo;
-      result.origine_economique_cession = of.origineCessionPro;
-      result.montant_investi_prevu = of.montantPrevu;
-    }
-
-    // Profil de risque
-    if (formData.profilRisque) {
-      const pr = formData.profilRisque;
-      result.horizon_placement = pr.horizonPlacement;
-      result.objectif_preservation = pr.objectifEpargneSecurite;
-      result.objectif_valorisation = pr.objectifProjetVie;
-      result.objectif_revenus = pr.objectifRevenuComplementaire;
-      result.objectif_transmission = pr.objectifTransmission;
-      result.objectif_fiscal = pr.objectifOptimisationFiscale;
-      result.profil_risque_calcule = pr.profilValide;
-      result.pertes_maximales_acceptables = pr.tolerancePerte ? `Maximum ${pr.tolerancePerte}%` : undefined;
-      result.reaction_perte = pr.reactionBaisse;
-    }
-
-    // KYC
-    if (formData.kyc) {
-      const kyc = formData.kyc;
-      result.experience_professionnelle_finance = kyc.experienceProfessionnelleFinance;
-      result.lecture_presse_financiere = kyc.sourcesPresse;
-      result.gestion_mandat = kyc.gestionParProfessionnel;
-      result.gestion_conseiller = kyc.conseillerActuel;
-    }
-
-    // Durabilité
-    if (formData.durabilite) {
-      const dur = formData.durabilite;
-      result.durabilite_integration = dur.interesseESG;
-      result.durabilite_impact = dur.investissementImpact;
-    }
-
-    return result;
-  };
-
   // Initialiser avec les données existantes du client
+  // Note: transformFormDataToFlat est importé depuis '../utils/formDataTransformer'
   // Fusionne les données directes ET les données stockées dans form_data (pour les champs supplémentaires)
   useEffect(() => {
     if (open && clientData) {
@@ -1004,14 +1111,11 @@ export default function DocumentEditor({
 
       case 'date':
         return (
-          <TextField
-            fullWidth
-            type="date"
+          <FrenchDatePicker
             label={`${field.label} ${field.required ? '*' : ''}`}
-            value={value}
-            onChange={(e) => handleFieldChange(field.key, e.target.value)}
-            size="small"
-            InputLabelProps={{ shrink: true }}
+            value={value as string | Date | null}
+            onChange={(date) => handleFieldChange(field.key, date ? date.toISOString().split('T')[0] : '')}
+            required={field.required}
             error={hasError}
             helperText={hasError ? errors[field.key] : ''}
           />
@@ -1048,15 +1152,42 @@ export default function DocumentEditor({
 
       case 'tel':
         return (
-          <TextField
+          <PhoneInput
             fullWidth
-            type="tel"
             label={`${field.label} ${field.required ? '*' : ''}`}
-            value={value}
-            onChange={(e) => handleFieldChange(field.key, e.target.value)}
+            value={value as string}
+            onChange={(phoneValue) => handleFieldChange(field.key, phoneValue)}
             size="small"
             error={hasError}
-            helperText={hasError ? errors[field.key] : ''}
+            helperText={hasError ? errors[field.key] : undefined}
+            required={field.required}
+          />
+        );
+
+      case 'currency':
+        return (
+          <CurrencyInput
+            fullWidth
+            label={`${field.label} ${field.required ? '*' : ''}`}
+            value={value as number | string | null}
+            onChange={(numValue) => handleFieldChange(field.key, numValue)}
+            size="small"
+            error={hasError}
+            helperText={hasError ? errors[field.key] : undefined}
+            suffix={field.suffix}
+          />
+        );
+
+      case 'percent':
+        return (
+          <PercentInput
+            fullWidth
+            label={`${field.label} ${field.required ? '*' : ''}`}
+            value={value as number | string | null}
+            onChange={(numValue) => handleFieldChange(field.key, numValue)}
+            size="small"
+            error={hasError}
+            helperText={hasError ? errors[field.key] : undefined}
           />
         );
 

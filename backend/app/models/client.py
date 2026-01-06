@@ -138,7 +138,7 @@ class Client(Base):
     # ==========================================
     # SECTION 3 : SITUATION FAMILIALE
     # ==========================================
-    situation_familiale = Column(String(50), nullable=False)
+    situation_familiale = Column(String(50), nullable=True)  # nullable pour brouillons
     date_mariage = Column(Date)
     contrat_mariage = Column(Boolean, default=False)
     regime_matrimonial = Column(String(100))
@@ -159,8 +159,8 @@ class Client(Base):
     # ==========================================
     # SECTION 4 : SITUATION FINANCIÈRE
     # ==========================================
-    revenus_annuels_foyer = Column(String(50), nullable=False)
-    patrimoine_global = Column(String(50), nullable=False)
+    revenus_annuels_foyer = Column(String(50), nullable=True)  # nullable pour brouillons
+    patrimoine_global = Column(String(50), nullable=True)  # nullable pour brouillons
     charges_annuelles_pourcent = Column(Numeric(5, 2))
     charges_annuelles_montant = Column(Numeric(15, 2))
     capacite_epargne_mensuelle = Column(Numeric(15, 2))
@@ -176,7 +176,7 @@ class Client(Base):
     # ==========================================
     # SECTION 5 : ORIGINE DES FONDS
     # ==========================================
-    origine_fonds_nature = Column(String(100), nullable=False)
+    origine_fonds_nature = Column(String(100), nullable=True)  # nullable pour brouillons
     origine_fonds_montant_prevu = Column(Numeric(15, 2))
     origine_economique_revenus = Column(Boolean, default=False)
     origine_economique_epargne = Column(Boolean, default=False)
@@ -281,10 +281,10 @@ class Client(Base):
     # ==========================================
     # SECTION 8 : PROFIL DE RISQUE
     # ==========================================
-    objectifs_investissement = Column(String(255), nullable=False)
-    horizon_placement = Column(String(50), nullable=False)
-    tolerance_risque = Column(String(50), nullable=False)
-    pertes_maximales_acceptables = Column(String(50), nullable=False)
+    objectifs_investissement = Column(String(255), nullable=True)  # nullable pour brouillons
+    horizon_placement = Column(String(50), nullable=True)  # nullable pour brouillons
+    tolerance_risque = Column(String(50), nullable=True)  # nullable pour brouillons
+    pertes_maximales_acceptables = Column(String(50), nullable=True)  # nullable pour brouillons
     experience_perte = Column(Boolean, default=False)
     experience_perte_niveau = Column(String(50))
     reaction_perte = Column(String(100))

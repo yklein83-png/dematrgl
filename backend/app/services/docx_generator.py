@@ -1168,6 +1168,136 @@ CONVENTION DE RECEPTION ET TRANSMISSION D'ORDRES
         replacements["{{PROFIL_RISQUE_DATE_CALCUL}}"] = self._format_date(client.profil_risque_date_calcul)
         replacements["{{PROFIL_COMMENTAIRE}}"] = self._get_field(client, 'profil_commentaire')
 
+        # ==========================================
+        # TABLEAUX JSONB - Enfants
+        # ==========================================
+        enfants = client.enfants or []
+        for i in range(1, 11):  # Support jusqu'à 10 enfants
+            if i <= len(enfants):
+                enfant = enfants[i-1]
+                replacements[f"{{{{ENFANT_{i}_NOM}}}}"] = f"{enfant.get('prenom', '')} {enfant.get('nom', '')}"
+                replacements[f"{{{{ENFANT_{i}_DATE_NAISSANCE}}}}"] = self._format_date(enfant.get('date_naissance'))
+                replacements[f"{{{{ENFANT_{i}_LIEN}}}}"] = enfant.get('lien_parente', '')
+                replacements[f"{{{{ENFANT_{i}_A_CHARGE}}}}"] = "Oui" if enfant.get('a_charge') else "Non"
+                replacements[f"{{{{ENFANT_{i}_A_ENFANTS}}}}"] = "Oui" if enfant.get('a_enfants') else "Non"
+            else:
+                # Lignes vides pour les enfants non existants
+                replacements[f"{{{{ENFANT_{i}_NOM}}}}"] = ""
+                replacements[f"{{{{ENFANT_{i}_DATE_NAISSANCE}}}}"] = ""
+                replacements[f"{{{{ENFANT_{i}_LIEN}}}}"] = ""
+                replacements[f"{{{{ENFANT_{i}_A_CHARGE}}}}"] = ""
+                replacements[f"{{{{ENFANT_{i}_A_ENFANTS}}}}"] = ""
+
+        # ==========================================
+        # TABLEAUX JSONB - Patrimoine Financier
+        # ==========================================
+        patrimoine_fin = client.patrimoine_financier or []
+        for i in range(1, 11):  # Support jusqu'à 10 actifs financiers
+            if i <= len(patrimoine_fin):
+                actif = patrimoine_fin[i-1]
+                replacements[f"{{{{PATRIMOINE_FIN_{i}_DESIGNATION}}}}"] = actif.get('designation', '')
+                replacements[f"{{{{PATRIMOINE_FIN_{i}_ORGANISME}}}}"] = actif.get('organisme', '')
+                replacements[f"{{{{PATRIMOINE_FIN_{i}_VALEUR}}}}"] = self._format_montant(actif.get('valeur'))
+                replacements[f"{{{{PATRIMOINE_FIN_{i}_DETENTEUR}}}}"] = actif.get('detenteur', 'Titulaire 1')
+                replacements[f"{{{{PATRIMOINE_FIN_{i}_DATE}}}}"] = self._format_date(actif.get('date_souscription'))
+                replacements[f"{{{{PATRIMOINE_FIN_{i}_REMARQUES}}}}"] = actif.get('remarques', '')
+            else:
+                replacements[f"{{{{PATRIMOINE_FIN_{i}_DESIGNATION}}}}"] = ""
+                replacements[f"{{{{PATRIMOINE_FIN_{i}_ORGANISME}}}}"] = ""
+                replacements[f"{{{{PATRIMOINE_FIN_{i}_VALEUR}}}}"] = ""
+                replacements[f"{{{{PATRIMOINE_FIN_{i}_DETENTEUR}}}}"] = ""
+                replacements[f"{{{{PATRIMOINE_FIN_{i}_DATE}}}}"] = ""
+                replacements[f"{{{{PATRIMOINE_FIN_{i}_REMARQUES}}}}"] = ""
+
+        # ==========================================
+        # TABLEAUX JSONB - Patrimoine Immobilier
+        # ==========================================
+        patrimoine_immo = client.patrimoine_immobilier or []
+        for i in range(1, 11):  # Support jusqu'à 10 biens immobiliers
+            if i <= len(patrimoine_immo):
+                bien = patrimoine_immo[i-1]
+                replacements[f"{{{{PATRIMOINE_IMMO_{i}_DESIGNATION}}}}"] = bien.get('designation', '')
+                replacements[f"{{{{PATRIMOINE_IMMO_{i}_DETENTEUR}}}}"] = bien.get('detenteur', 'Titulaire 1')
+                replacements[f"{{{{PATRIMOINE_IMMO_{i}_FORME}}}}"] = bien.get('forme_propriete', '')
+                replacements[f"{{{{PATRIMOINE_IMMO_{i}_VALEUR}}}}"] = self._format_montant(bien.get('valeur_actuelle'))
+                replacements[f"{{{{PATRIMOINE_IMMO_{i}_REVENUS}}}}"] = self._format_montant(bien.get('revenus_annuels'))
+                replacements[f"{{{{PATRIMOINE_IMMO_{i}_CREDITS}}}}"] = "Oui" if bien.get('credit_en_cours') else "Non"
+            else:
+                replacements[f"{{{{PATRIMOINE_IMMO_{i}_DESIGNATION}}}}"] = ""
+                replacements[f"{{{{PATRIMOINE_IMMO_{i}_DETENTEUR}}}}"] = ""
+                replacements[f"{{{{PATRIMOINE_IMMO_{i}_FORME}}}}"] = ""
+                replacements[f"{{{{PATRIMOINE_IMMO_{i}_VALEUR}}}}"] = ""
+                replacements[f"{{{{PATRIMOINE_IMMO_{i}_REVENUS}}}}"] = ""
+                replacements[f"{{{{PATRIMOINE_IMMO_{i}_CREDITS}}}}"] = ""
+
+        # ==========================================
+        # TABLEAUX JSONB - Patrimoine Professionnel
+        # ==========================================
+        patrimoine_pro = client.patrimoine_professionnel or []
+        for i in range(1, 11):  # Support jusqu'à 10 actifs professionnels
+            if i <= len(patrimoine_pro):
+                actif = patrimoine_pro[i-1]
+                replacements[f"{{{{PATRIMOINE_PRO_{i}_DESIGNATION}}}}"] = actif.get('designation', '')
+                replacements[f"{{{{PATRIMOINE_PRO_{i}_DETENTEUR}}}}"] = actif.get('detenteur', '')
+                replacements[f"{{{{PATRIMOINE_PRO_{i}_VALEUR}}}}"] = self._format_montant(actif.get('valeur_patrimoniale'))
+                replacements[f"{{{{PATRIMOINE_PRO_{i}_CHARGES}}}}"] = self._format_montant(actif.get('charges'))
+                replacements[f"{{{{PATRIMOINE_PRO_{i}_REMARQUES}}}}"] = actif.get('remarques', '')
+            else:
+                replacements[f"{{{{PATRIMOINE_PRO_{i}_DESIGNATION}}}}"] = ""
+                replacements[f"{{{{PATRIMOINE_PRO_{i}_DETENTEUR}}}}"] = ""
+                replacements[f"{{{{PATRIMOINE_PRO_{i}_VALEUR}}}}"] = ""
+                replacements[f"{{{{PATRIMOINE_PRO_{i}_CHARGES}}}}"] = ""
+                replacements[f"{{{{PATRIMOINE_PRO_{i}_REMARQUES}}}}"] = ""
+
+        # ==========================================
+        # TABLEAUX JSONB - Emprunts (Passif)
+        # ==========================================
+        emprunts = client.patrimoine_emprunts or []
+        for i in range(1, 11):
+            if i <= len(emprunts):
+                emprunt = emprunts[i-1]
+                replacements[f"{{{{EMPRUNT_{i}_DESIGNATION}}}}"] = emprunt.get('designation', '')
+                replacements[f"{{{{EMPRUNT_{i}_ORGANISME}}}}"] = emprunt.get('organisme', '')
+                replacements[f"{{{{EMPRUNT_{i}_CAPITAL}}}}"] = self._format_montant(emprunt.get('capital_restant'))
+                replacements[f"{{{{EMPRUNT_{i}_MENSUALITE}}}}"] = self._format_montant(emprunt.get('mensualite'))
+                replacements[f"{{{{EMPRUNT_{i}_FIN}}}}"] = self._format_date(emprunt.get('date_fin'))
+            else:
+                replacements[f"{{{{EMPRUNT_{i}_DESIGNATION}}}}"] = ""
+                replacements[f"{{{{EMPRUNT_{i}_ORGANISME}}}}"] = ""
+                replacements[f"{{{{EMPRUNT_{i}_CAPITAL}}}}"] = ""
+                replacements[f"{{{{EMPRUNT_{i}_MENSUALITE}}}}"] = ""
+                replacements[f"{{{{EMPRUNT_{i}_FIN}}}}"] = ""
+
+        # ==========================================
+        # TABLEAUX JSONB - Revenus détaillés
+        # ==========================================
+        revenus = client.patrimoine_revenus or []
+        for i in range(1, 11):
+            if i <= len(revenus):
+                revenu = revenus[i-1]
+                replacements[f"{{{{REVENU_{i}_TYPE}}}}"] = revenu.get('type', '')
+                replacements[f"{{{{REVENU_{i}_MONTANT}}}}"] = self._format_montant(revenu.get('montant_annuel'))
+                replacements[f"{{{{REVENU_{i}_BENEFICIAIRE}}}}"] = revenu.get('beneficiaire', '')
+            else:
+                replacements[f"{{{{REVENU_{i}_TYPE}}}}"] = ""
+                replacements[f"{{{{REVENU_{i}_MONTANT}}}}"] = ""
+                replacements[f"{{{{REVENU_{i}_BENEFICIAIRE}}}}"] = ""
+
+        # ==========================================
+        # TABLEAUX JSONB - Charges détaillées
+        # ==========================================
+        charges = client.patrimoine_charges or []
+        for i in range(1, 11):
+            if i <= len(charges):
+                charge = charges[i-1]
+                replacements[f"{{{{CHARGE_{i}_TYPE}}}}"] = charge.get('type', '')
+                replacements[f"{{{{CHARGE_{i}_MONTANT}}}}"] = self._format_montant(charge.get('montant_annuel'))
+                replacements[f"{{{{CHARGE_{i}_REMARQUE}}}}"] = charge.get('remarque', '')
+            else:
+                replacements[f"{{{{CHARGE_{i}_TYPE}}}}"] = ""
+                replacements[f"{{{{CHARGE_{i}_MONTANT}}}}"] = ""
+                replacements[f"{{{{CHARGE_{i}_REMARQUE}}}}"] = ""
+
         # Conseiller
         replacements["{{SIGNATURE_CONSEILLER}}"] = f"{self._safe(conseiller.prenom)} {self._safe(conseiller.nom, '').upper()}"
         replacements["{{SIGNATURE_CLIENT}}"] = nom_complet_t1
