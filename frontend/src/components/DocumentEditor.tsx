@@ -674,6 +674,7 @@ export const DOCUMENT_REQUIRED_FIELDS: Record<DocumentType, DocumentField[]> = {
 
     // ==================== PROFIL CALCULÉ ====================
     { key: 'profil_risque_calcule', label: 'Profil de risque déterminé', type: 'select', section: 'Conclusion - Profil de risque', required: true, options: [
+      { value: '', label: '-- Non défini --' },
       { value: 'Sécuritaire', label: 'Sécuritaire' },
       { value: 'Prudent', label: 'Prudent' },
       { value: 'Équilibré', label: 'Équilibré' },
@@ -741,6 +742,7 @@ export const DOCUMENT_REQUIRED_FIELDS: Record<DocumentType, DocumentField[]> = {
     { key: 't1_nom', label: 'Nom', type: 'text', section: 'Client', required: true },
     { key: 't1_prenom', label: 'Prénom', type: 'text', section: 'Client', required: true },
     { key: 'profil_risque_calcule', label: 'Profil de risque validé', type: 'select', section: 'Profil', required: true, options: [
+      { value: '', label: '-- Non défini --' },
       { value: 'Sécuritaire', label: 'Sécuritaire' },
       { value: 'Prudent', label: 'Prudent' },
       { value: 'Équilibré', label: 'Équilibré' },

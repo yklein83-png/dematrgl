@@ -573,7 +573,10 @@ export default function SectionProfilRisque({
             render={({ field }) => (
               <FormControl fullWidth size="small">
                 <InputLabel>Profil retenu *</InputLabel>
-                <Select {...field} label="Profil retenu *">
+                <Select {...field} label="Profil retenu *" value={field.value || ''}>
+                  <MenuItem value="">
+                    <em>-- Non défini --</em>
+                  </MenuItem>
                   {profilsRisque.map((profil) => (
                     <MenuItem key={profil.value} value={profil.value}>
                       {profil.label} - {profil.description}
