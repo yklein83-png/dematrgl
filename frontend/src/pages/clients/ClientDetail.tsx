@@ -29,6 +29,11 @@ import {
   IconButton,
   Tooltip,
   LinearProgress,
+  Select,
+  MenuItem,
+  FormControl,
+  InputLabel,
+  SelectChangeEvent,
 } from '@mui/material';
 import {
   ArrowBack as BackIcon,
@@ -248,6 +253,29 @@ const ClientDetail: React.FC = () => {
       await handleDelete(existingDoc.id);
     }
     await handleGenerate(type);
+  };
+
+  // Changer le statut du client
+  const handleStatusChange = async (event: SelectChangeEvent<string>) => {
+    const newStatus = event.target.value;
+    if (!id || !client) return;
+
+    try {
+      await api.patch(`/clients/${id}`, { statut: newStatus });
+      setClient({ ...client, statut: newStatus });
+      setSnackbar({
+        open: true,
+        message: `Statut changé en "${newStatus}"`,
+        severity: 'success',
+      });
+    } catch (err: unknown) {
+      const axiosError = err as { response?: { data?: { detail?: string } } };
+      setSnackbar({
+        open: true,
+        message: axiosError.response?.data?.detail || 'Erreur lors du changement de statut',
+        severity: 'error',
+      });
+    }
   };
 
   const handleEditorSave = async (data: Record<string, unknown>) => {
@@ -558,11 +586,32 @@ const ClientDetail: React.FC = () => {
                   </Grid>
                   <Grid item xs={6}>
                     <Typography variant="caption" color="text.secondary">Statut</Typography>
-                    <Chip
-                      label={client.statut || 'prospect'}
-                      color={client.statut === 'actif' ? 'success' : 'default'}
-                      size="small"
-                    />
+                    <FormControl size="small" fullWidth sx={{ mt: 0.5 }}>
+                      <Select
+                        value={(client.statut as string) || 'brouillon'}
+                        onChange={handleStatusChange}
+                        sx={{
+                          '& .MuiSelect-select': {
+                            py: 0.75,
+                            display: 'flex',
+                            alignItems: 'center',
+                          },
+                        }}
+                      >
+                        <MenuItem value="brouillon">
+                          <Chip label="Brouillon" size="small" sx={{ backgroundColor: '#e0e0e0' }} />
+                        </MenuItem>
+                        <MenuItem value="prospect">
+                          <Chip label="Prospect" size="small" color="warning" />
+                        </MenuItem>
+                        <MenuItem value="client_actif">
+                          <Chip label="Client actif" size="small" color="success" />
+                        </MenuItem>
+                        <MenuItem value="client_inactif">
+                          <Chip label="Client inactif" size="small" sx={{ backgroundColor: '#9e9e9e', color: 'white' }} />
+                        </MenuItem>
+                      </Select>
+                    </FormControl>
                   </Grid>
                   <Grid item xs={6}>
                     <Typography variant="caption" color="text.secondary">Créé le</Typography>
