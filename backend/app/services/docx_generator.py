@@ -1087,6 +1087,15 @@ CONVENTION DE RECEPTION ET TRANSMISSION D'ORDRES
         replacements["{{DONATION_ENFANTS_DATE}}"] = self._format_date(client.donation_enfants_date)
         replacements["{{DONATION_ENFANTS_MONTANT}}"] = self._format_montant(client.donation_enfants_montant)
 
+        # Sections conditionnelles situation familiale
+        situation = self._safe(client.situation_familiale, '').lower()
+        replacements["{{#IF_MARIE}}"] = "" if 'marié' in situation else "<!-- MASQUÉ -->"
+        replacements["{{/IF_MARIE}}"] = "" if 'marié' in situation else "<!-- /MASQUÉ -->"
+        replacements["{{#IF_PACSE}}"] = "" if 'pacsé' in situation or 'pacs' in situation else "<!-- MASQUÉ -->"
+        replacements["{{/IF_PACSE}}"] = "" if 'pacsé' in situation or 'pacs' in situation else "<!-- /MASQUÉ -->"
+        replacements["{{#IF_DIVORCE}}"] = "" if 'divorcé' in situation else "<!-- MASQUÉ -->"
+        replacements["{{/IF_DIVORCE}}"] = "" if 'divorcé' in situation else "<!-- /MASQUÉ -->"
+
         # Situation financière
         replacements["{{REVENUS_ANNUELS_FOYER}}"] = self._safe(client.revenus_annuels_foyer)
         replacements["{{PATRIMOINE_GLOBAL}}"] = self._safe(client.patrimoine_global)
@@ -1103,6 +1112,8 @@ CONVENTION DE RECEPTION ET TRANSMISSION D'ORDRES
         # Origine des fonds
         replacements["{{ORIGINE_FONDS_NATURE}}"] = self._get_field(client, 'origine_fonds_nature')
         replacements["{{ORIGINE_FONDS_MONTANT_PREVU}}"] = self._format_montant(self._get_field(client, 'origine_fonds_montant_prevu'))
+
+        # Ancien format (compatibilité)
         replacements["{{ORIGINE_ECONOMIQUE_REVENUS}}"] = self._checkbox(self._get_bool_field(client, 'origine_economique_revenus'))
         replacements["{{ORIGINE_ECONOMIQUE_EPARGNE}}"] = self._checkbox(self._get_bool_field(client, 'origine_economique_epargne'))
         replacements["{{ORIGINE_ECONOMIQUE_HERITAGE}}"] = self._checkbox(self._get_bool_field(client, 'origine_economique_heritage'))
@@ -1113,6 +1124,23 @@ CONVENTION DE RECEPTION ET TRANSMISSION D'ORDRES
         replacements["{{ORIGINE_ECONOMIQUE_ASSURANCE_VIE}}"] = self._checkbox(self._get_bool_field(client, 'origine_economique_assurance_vie'))
         replacements["{{ORIGINE_ECONOMIQUE_AUTRES}}"] = self._get_field(client, 'origine_economique_autres')
         replacements["{{ORIGINE_FONDS_PROVENANCE_ETABLISSEMENT}}"] = self._get_field(client, 'origine_fonds_provenance_etablissement')
+
+        # Nouveau format: checkbox + montant (pour QCC v2)
+        origins = [
+            ('REVENUS', 'origine_economique_revenus', 'origine_revenus_montant'),
+            ('EPARGNE', 'origine_economique_epargne', 'origine_epargne_montant'),
+            ('HERITAGE', 'origine_economique_heritage', 'origine_heritage_montant'),
+            ('CESSION_PRO', 'origine_economique_cession_pro', 'origine_cession_pro_montant'),
+            ('CESSION_IMMO', 'origine_economique_cession_immo', 'origine_cession_immo_montant'),
+            ('CESSION_MOBILIERE', 'origine_economique_cession_mobiliere', 'origine_cession_mobiliere_montant'),
+            ('GAINS_JEU', 'origine_economique_gains_jeu', 'origine_gains_jeu_montant'),
+            ('ASSURANCE_VIE', 'origine_economique_assurance_vie', 'origine_assurance_vie_montant'),
+            ('AUTRES', 'origine_economique_autres', 'origine_autres_montant'),
+        ]
+        for key, check_field, montant_field in origins:
+            is_checked = self._get_bool_field(client, check_field)
+            replacements[f"{{{{ORIGINE_{key}_CHECK}}}}"] = "☑" if is_checked else "☐"
+            replacements[f"{{{{ORIGINE_{key}_MONTANT}}}}"] = self._format_montant(self._get_field(client, montant_field)) if is_checked else ""
 
         # LCB-FT
         replacements["{{LCB_FT_PPE}}"] = "Oui" if self._get_bool_field(client, 'lcb_ft_ppe') else "Non"
@@ -1324,9 +1352,45 @@ CONVENTION DE RECEPTION ET TRANSMISSION D'ORDRES
         # Remplacer les placeholders
         self._replace_placeholders_in_doc(doc, replacements)
 
+        # Supprimer les sections conditionnelles masquées
+        self._remove_hidden_sections(doc)
+
         # Sauvegarder avec nouveau format de nom
         filename = self._generate_filename("QCC", client)
         return self._save_document(doc, filename)
+
+    def _remove_hidden_sections(self, doc: Document):
+        """
+        Supprime les paragraphes contenant les marqueurs de sections masquées
+        Les marqueurs <!-- MASQUÉ --> et <!-- /MASQUÉ --> indiquent des sections à supprimer
+        """
+        paragraphs_to_remove = []
+        in_hidden_section = False
+
+        for para in doc.paragraphs:
+            text = para.text
+            if "<!-- MASQUÉ -->" in text:
+                in_hidden_section = True
+                paragraphs_to_remove.append(para)
+            elif "<!-- /MASQUÉ -->" in text:
+                in_hidden_section = False
+                paragraphs_to_remove.append(para)
+            elif in_hidden_section:
+                paragraphs_to_remove.append(para)
+
+        # Supprimer les paragraphes marqués
+        for para in paragraphs_to_remove:
+            p = para._element
+            p.getparent().remove(p)
+
+        # Aussi traiter les tableaux
+        for table in doc.tables:
+            for row in table.rows:
+                for cell in row.cells:
+                    for para in cell.paragraphs:
+                        text = para.text
+                        if "<!-- MASQUÉ -->" in text or "<!-- /MASQUÉ -->" in text:
+                            para.clear()
 
     def _translate_value(self, value: str, translations: Dict[str, str]) -> str:
         """Traduit une valeur en utilisant un dictionnaire de traductions"""
