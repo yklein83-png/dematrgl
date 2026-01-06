@@ -1,0 +1,4 @@
+# Dossier pour les certificats SSL
+# En production, placer ici:
+# - fullchain.pem (certificat)
+# - privkey.pem (clé privée)
